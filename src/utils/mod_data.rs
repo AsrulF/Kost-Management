@@ -6,6 +6,25 @@ pub struct Kost {
     rooms: Vec<KostRooms>,
 }
 
+impl Kost {
+    fn new(num_of_rooms: u32) -> Self {
+        let mut rooms: Vec<KostRooms> = Vec::with_capacity(num_of_rooms as usize);
+
+        for _ in 0..num_of_rooms {
+            let room_number = (rooms.len() + 1) as u32;
+
+            let mut new_room = KostRooms::new();
+            new_room.rooms_number = room_number;
+
+            rooms.push(new_room);
+        };
+        
+        Self {
+            rooms
+        }
+    }
+}
+
 pub struct KostRooms {
     rooms_number: u32,
     vacant_status: bool,
@@ -27,7 +46,7 @@ impl Default for KostRooms {
             guest_mail: "".to_string(),
             start_date: Local::now().date_naive(),
             payment_status: false,
-            payment_history: PaymentHistory { payments: Vec::new(), payment_date: Vec::new() },
+            payment_history: PaymentHistory::new(),
         }
     }
 }
@@ -97,6 +116,15 @@ impl KostRooms {
 pub struct PaymentHistory {
     payments: Vec<String>,
     payment_date: Vec<NaiveDate>,
+}
+
+impl PaymentHistory {
+    pub fn new() -> Self {
+        Self {
+            payments: Vec::new(),
+            payment_date: Vec::new(),
+        }
+    }
 }
 
 
