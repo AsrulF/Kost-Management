@@ -74,15 +74,11 @@ impl KostRooms {
         let today = Local::now().date_naive();
 
         //Check this month payment
-        let this_month = room.payment_history.payment_date
+        let this_month = room
+            .payment_history
+            .payment_date
             .iter()
-            .map(|payment| payment.month())
-            .any(|month| month == today.month()) 
-            && 
-            room.payment_history.payment_date
-            .iter()
-            .map(|payment|payment.year())
-            .any(|year| year == today.year());
+            .any(|payment| payment.month() == today.month() && payment.year() == today.year());
 
         if !this_month {
             room.payment_status = false;
