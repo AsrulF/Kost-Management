@@ -1,11 +1,16 @@
-use crate::utils::mod_data::KostRooms;
+use crate::utils::mod_data::{Kost, KostRooms};
+use actix_web::{App, get, post, HttpServer};
 
 mod utils {
     pub mod mod_data;
+    pub mod mod_user;
 }
 
-fn main() {
-    let mut rooms = KostRooms::new();
-    KostRooms::input_tenant(&mut rooms, "daus".to_string(), "0821".to_string(), "adw@mail.com".to_string());
-    KostRooms::room_status(&rooms);
+
+
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let kost = Kost::new(5);
+    println!("{:#?}", kost);
 }

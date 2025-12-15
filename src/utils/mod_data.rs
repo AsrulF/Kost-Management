@@ -2,12 +2,14 @@
 
 use chrono::{Local, NaiveDate, Datelike};
 
+#[derive(Debug)]
 pub struct Kost {
     rooms: Vec<KostRooms>,
 }
 
 impl Kost {
-    fn new(num_of_rooms: u32) -> Self {
+    // num of room used to determine how many room in the Kost
+    pub fn new(num_of_rooms: u32) -> Self {
         let mut rooms: Vec<KostRooms> = Vec::with_capacity(num_of_rooms as usize);
 
         for _ in 0..num_of_rooms {
@@ -25,6 +27,7 @@ impl Kost {
     }
 }
 
+#[derive(Debug)]
 pub struct KostRooms {
     rooms_number: u32,
     vacant_status: bool,
@@ -113,6 +116,7 @@ impl KostRooms {
     }
 }
 
+#[derive(Debug)]
 pub struct PaymentHistory {
     payments: Vec<String>,
     payment_date: Vec<NaiveDate>,
