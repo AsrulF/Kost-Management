@@ -27,7 +27,7 @@ impl Kost {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct KostRooms {
     rooms_number: u32,
     vacant_status: bool,
@@ -60,16 +60,16 @@ impl KostRooms {
     }
 
     pub fn input_tenant(
-        room: &mut KostRooms,
+        &mut self,
         guest_name: String,
         guest_contact: String,
         guest_mail: String,
     ) {
-        room.vacant_status = true;
-        room.guest_name = guest_name;
-        room.guest_contact = guest_contact;
-        room.guest_mail = guest_mail;
-        room.start_date = Local::now().date_naive();
+        self.vacant_status = true;
+        self.guest_name = guest_name;
+        self.guest_contact = guest_contact;
+        self.guest_mail = guest_mail;
+        self.start_date = Local::now().date_naive();
     }
 
     pub fn room_status(room: &KostRooms) {
@@ -92,31 +92,31 @@ impl KostRooms {
         )
     }
 
-    pub fn payment_control(room: &mut KostRooms) {
+    pub fn payment_control(&mut self) {
         let today = Local::now().date_naive();
 
-        //Check this month payment
-        let this_month = room
+        // Check this month payment
+        let this_month = self
             .payment_history
             .payment_date
             .iter()
             .any(|payment| payment.month() == today.month() && payment.year() == today.year());
 
         if !this_month {
-            room.payment_status = false;
+            self.payment_status = false;
         }
 
-        if room.payment_status {
+        if self.payment_status {
             println!("This month payment was done")
         } else {
             println!("Payment was not done, initiating reminder procedure");
-            send_reminder(&room.guest_mail, &room.guest_contact);
+            send_reminder(&self.guest_mail, &self.guest_contact);
         }
             
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct PaymentHistory {
     payments: Vec<String>,
     payment_date: Vec<NaiveDate>,
@@ -141,4 +141,68 @@ fn send_reminder(email: &str, contact: &str) {
          - Integrating to API to actually send notification to tenants mail and contact
     */
     
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    // Test for KostRooms
+    #[test]
+    fn new_room() {
+        let expected: KostRooms = KostRooms {
+            rooms_number: 0,
+            vacant_status: false,
+            guest_name: "".to_string(),
+            guest_contact: "".to_string(),
+            guest_mail: "".to_string(),
+            start_date: Local::now().date_naive(),
+            payment_status: false,
+            payment_history: PaymentHistory::new(),
+        };
+
+        let room: KostRooms = KostRooms::new();
+
+        assert_eq!(room, expected);
+    }
+
+    #[test]
+    fn input_tenant() {
+        let expected: KostRooms = KostRooms {
+            rooms_number: 0,
+            vacant_status: true,
+            guest_name: "carrera".to_string(),
+            guest_contact: "123456789".to_string(),
+            guest_mail: "asdfg@gmail.com".to_string(),
+            start_date: Local::now().date_naive(),
+            payment_status: false,
+            payment_history: PaymentHistory::new(),
+        };
+
+        let mut rooms: KostRooms = KostRooms::new();
+        rooms.input_tenant(
+        "carrera".to_string(), 
+        "123456789".to_string(),
+        "asdfg@gmail.com".to_string());
+
+        assert_eq!(rooms, expected);
+    }
+
+    #[test]
+    fn payment() {
+        let mut room: KostRooms = KostRooms {
+            rooms_number: 0,
+            vacant_status: true,
+            guest_name: "carrera".to_string(),
+            guest_contact: "123456789".to_string(),
+            guest_mail: "asdfg@gmail.com".to_string(),
+            start_date: Local::now().date_naive(),
+            payment_status: true,
+            payment_history: PaymentHistory::new(),
+        };
+
+        room.payment_control();
+
+        assert_eq!(room.payment_status, false);
+    }
+
 }
