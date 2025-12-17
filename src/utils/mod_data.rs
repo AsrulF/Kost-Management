@@ -205,4 +205,17 @@ mod test {
         assert_eq!(room.payment_status, false);
     }
 
+    // Test for Kost
+    #[test]
+    fn kost_rooms() {
+        let expected_kost_rooms = 10;
+
+        let kost: Kost = Kost::new(10);
+
+        let room_number = kost.rooms[3].rooms_number;
+
+        assert_eq!(kost.rooms.len(), expected_kost_rooms);
+        assert_eq!(room_number, 4u32);
+    }
+
 }
