@@ -5,11 +5,12 @@ use chrono::{Local, NaiveDate, Datelike};
 #[derive(Debug)]
 pub struct Kost {
     rooms: Vec<KostRooms>,
+    user_id: u64,
 }
 
 impl Kost {
     // num of room used to determine how many room in the Kost
-    pub fn new(num_of_rooms: u32) -> Self {
+    pub fn new(num_of_rooms: u32, user_id: u64) -> Self {
         let mut rooms: Vec<KostRooms> = Vec::with_capacity(num_of_rooms as usize);
 
         for _ in 0..num_of_rooms {
@@ -22,7 +23,8 @@ impl Kost {
         };
         
         Self {
-            rooms
+            rooms,
+            user_id,
         }
     }
 }
@@ -210,7 +212,7 @@ mod test {
     fn kost_rooms() {
         let expected_kost_rooms = 10;
 
-        let kost: Kost = Kost::new(10);
+        let kost: Kost = Kost::new(10, 12312343432423);
 
         let room_number = kost.rooms[3].rooms_number;
 

@@ -1,8 +1,9 @@
 // User database
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, PartialEq)]
 pub struct Users {
-    list: Vec<User>,
+    pub list: Vec<User>,
 }
 
 impl Users {
@@ -15,39 +16,14 @@ impl Users {
             list: users,
         }
     }
-
-    pub fn user_login(
-        &self,
-        username: String,
-        password: String,
-    ) -> Result<&User, LoginError > {
-        if self.list.is_empty() {
-            println!("Users is empty, please make a new user")
-        }
-
-        let user = self
-            .list
-            .iter()
-            .find(|user| user.username == username)
-            .ok_or(LoginError::UserNotFound)?;
-
-        if user.password != password {
-            return Err(LoginError::InvalidPassword);
-        }
-
-        if user.user_role != Role::Admin {
-            return Err(LoginError::UserIsNotAdmin);
-        }
-
-        Ok(&user)
-    }
 }
 
 #[derive(Debug, PartialEq)]
 pub struct User {
-    username: String,
-    password: String,
-    user_role: Role,
+    pub username: String,
+    pub password: String,
+    pub user_role: Role,
+    pub user_id: u64,
 }
 
 impl User {
@@ -59,6 +35,7 @@ impl User {
             username,
             password,
             user_role: Role::Admin,
+            user_id: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         }
     }
 }
@@ -74,6 +51,7 @@ pub enum LoginError {
     UserNotFound,
     UserIsNotAdmin,
     InvalidPassword,
+    TokenCreationError,
 }
 
 #[cfg(test)]
@@ -83,7 +61,12 @@ mod test {
     #[test]
     fn new_user() {
         let new_user: User = User::new("admin2".to_string(), "123456".to_string());
-        assert_eq!(new_user, User{ username: "admin2".to_string(), password: "123456".to_string(), user_role: Role::Admin});
+        assert_eq!(new_user, User{ 
+            username: "admin2".to_string(), 
+            password: "123456".to_string(), 
+            user_role: Role::Admin,
+            user_id: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+        })
     }
 
     #[test]
@@ -94,6 +77,7 @@ mod test {
                     username: "admin1".to_string(),
                     password: "123456".to_string(),
                     user_role: Role::Admin,
+                    user_id: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
                 }
             ]
         };
@@ -101,30 +85,5 @@ mod test {
         let new_users = Users::new();
 
         assert_eq!(new_users, expected);
-    }
-
-    #[test]
-    fn login_success() {
-        let users = Users::new();
-        let expected: Result<&User, LoginError> = Ok( &User{
-            username: "admin1".to_string(),
-            password: "123456".to_string(),
-            user_role: Role::Admin,
-        });
-
-        let login = users.user_login("admin1".to_string(), "123456".to_string());
-
-        assert_eq!(login, expected)
-    }
-
-    #[test]
-    fn login_failed() {
-        let users = Users::new();
-        let user_not_found = users.user_login("admin3".to_string(), "123456".to_string());
-        let invalid_password = users.user_login("admin1".to_string(), "7891011".to_string());
-
-
-        assert_eq!(user_not_found, Err(LoginError::UserNotFound));
-        assert_eq!(invalid_password, Err(LoginError::InvalidPassword));
     }
 }
