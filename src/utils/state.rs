@@ -1,8 +1,8 @@
 use crate::utils::mod_data::Kost;
 use crate::utils::mod_user::{Users};
-use std::sync::Mutex;
+use std::sync::{Mutex, Arc};
 
 pub struct AppState {
-    pub kost_db: Mutex<Kost>,
-    pub user_db: Mutex<Users>,
+    pub kost_db: Arc<Mutex<Kost>>,
+    pub user_db: Arc<Mutex<Users>>,
 }

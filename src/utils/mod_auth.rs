@@ -24,7 +24,19 @@ pub fn login(
     username: String,
     password: String,
 ) -> Result<AuthResponse, LoginError> {
-    todo!()
+    let user = database
+        .list
+        .iter()
+        .find(|user| user.username == username && user.password == password)
+        .cloned()
+        .ok_or_else(|| LoginError::UserNotFound)?;
+
+    let token = create_jwt(&user)?;
+
+    Ok(AuthResponse {
+        user,
+        token
+    })
 }
 
 pub fn create_jwt(user: &User) -> Result<String, LoginError> {
