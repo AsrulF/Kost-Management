@@ -1,4 +1,5 @@
 // User database
+use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, PartialEq)]
@@ -18,7 +19,7 @@ impl Users {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
 pub struct User {
     pub username: String,
     pub password: String,
@@ -40,7 +41,7 @@ impl User {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
 pub enum Role {
     Admin,
     NotAdmin,

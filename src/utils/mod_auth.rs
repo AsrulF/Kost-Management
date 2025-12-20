@@ -6,14 +6,25 @@ use std::env;
 
 use crate::utils::mod_user::{LoginError, User, Users};
 
+
+// Struct for send authorized or not, if authorized, create token via jwt
+#[derive(Serialize, Deserialize)]
 pub struct AuthResponse {
     pub user: User,
     pub token: String,
 }
 
-#[derive(Debu, Serialize, Deserialize)]
+// Struct for sending json login form
+#[derive(Deserialize)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String,
+}
+
+// Struct for create token
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: u32,
+    pub sub: u64,
     pub username: String,
     pub exp: usize,
 }
@@ -58,7 +69,7 @@ pub fn create_jwt(user: &User) -> Result<String, LoginError> {
     encode(
         &Header::default(), 
         &claims, 
-        &EncodingKey::from_secret(&jwt_secret),
+        &EncodingKey::from_secret(&jwt_secret.as_bytes()),
     )
     .map_err(|_| LoginError::TokenCreationError)
 } 
