@@ -1,4 +1,10 @@
-use crate::utils::{mod_auth::{LoginRequest, login}, mod_data::Kost, mod_user::Users, state::AppState};
+use crate::utils::{
+    mod_auth::{LoginRequest, login}, 
+    mod_data::{Kost, Kosts}, 
+    mod_user::{User, Users, Role}, 
+    mod_response::*,
+    state::AppState, 
+};
 use actix_web::{App, HttpResponse, HttpServer, Responder, get, post, web};
 use actix_cors::Cors;
 use std::sync::{Mutex, Arc};
@@ -7,6 +13,7 @@ mod utils {
     pub mod mod_data;
     pub mod mod_user;
     pub mod mod_auth;
+    pub mod mod_response;
     pub mod state;
 }
 
@@ -26,12 +33,47 @@ async fn login_handle(
     }
 }
 
+#[get("/app-data")]
+async fn get_app_data(state: web::Data<AppState>) -> impl Responder {
+    let users = state.user_db.lock().unwrap();
+    let kosts = state.kosts_db.lock().unwrap();
+
+    let users_dtos = users
+        .list
+        .iter()
+        .map(|u| UserDto {
+            username: u.username.clone(),
+            user_id: u.user_id,
+            user_role: {
+                match u.user_role {
+                    Role::Admin => "Admin".to_string(),
+                    Role::NotAdmin => "Member".to_string()
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let kosts_dtos = kosts
+        .kost_database
+        .iter()
+        .map(|k| KostDto {
+            kost_id: k.user_id,
+            kost_rooms: k.rooms.len() as u8,
+        })
+        .collect::<Vec<_>>();
+
+    HttpResponse::Ok().json(AppStateRespose {
+        users: users_dtos,
+        kosts: kosts_dtos
+    })
+    
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let state = web::Data::new(AppState {
-        kost_db: Arc::new(Mutex::new(Kost::new(5, 1231234214))),
         user_db: Arc::new(Mutex::new(Users::new())),
+        kosts_db: Arc::new(Mutex::new(Kosts::new())),
     });
     
     HttpServer::new(move ||{

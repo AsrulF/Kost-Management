@@ -1,11 +1,23 @@
 // Database for the Kost
 
 use chrono::{Local, NaiveDate, Datelike};
+use crate::utils::mod_user::*;
+
+
+pub struct Kosts {
+    pub kost_database: Vec<Kost>,
+}
+
+impl Kosts {
+    pub fn new() -> Self {
+        Self { kost_database: Vec::new() }
+    }
+}
 
 #[derive(Debug)]
 pub struct Kost {
-    rooms: Vec<KostRooms>,
-    user_id: u64,
+    pub rooms: Vec<KostRooms>,
+    pub user_id: u64,
 }
 
 impl Kost {
@@ -211,8 +223,14 @@ mod test {
     #[test]
     fn kost_rooms() {
         let expected_kost_rooms = 10;
+        let user =  User {
+            username: "admin1".to_string(),
+            password: "123456".to_string(),
+            user_role: crate::utils::mod_user::Role::Admin,
+            user_id: 12345678,
+        };
 
-        let kost: Kost = Kost::new(10, 12312343432423);
+        let kost: Kost = Kost::new(10, user.user_id);
 
         let room_number = kost.rooms[3].rooms_number;
 

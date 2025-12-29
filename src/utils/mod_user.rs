@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Users {
     pub list: Vec<User>,
 }
@@ -41,7 +41,7 @@ impl User {
     }
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone, Copy)]
 pub enum Role {
     Admin,
     NotAdmin,
