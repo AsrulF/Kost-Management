@@ -33,6 +33,20 @@ async fn login_handle(
     }
 }
 
+#[post("/users")]
+async fn create_user(
+    state: web::Data<AppState>,
+    payload: web::Json<CreateUserDto>,
+) -> impl Responder {
+    let mut users = state.user_db.lock().unwrap();
+
+    let user = User::new(payload.username.clone(), payload.password.clone());
+
+    users.add_user(user);
+
+    HttpResponse::Ok().json(&users.list)
+}
+
 #[get("/app-data")]
 async fn get_app_data(state: web::Data<AppState>) -> impl Responder {
     let users = state.user_db.lock().unwrap();

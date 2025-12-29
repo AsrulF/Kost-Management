@@ -17,6 +17,10 @@ impl Users {
             list: users,
         }
     }
+
+    pub fn add_user(&mut self, user: User) {
+        self.list.push(user);
+    }
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]

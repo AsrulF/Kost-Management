@@ -1,4 +1,6 @@
-use serde::Serialize; 
+use serde::{Deserialize, Serialize}; 
+
+// Handle AppState for frontend
 
 #[derive(Serialize)]
 pub struct UserDto {
@@ -17,4 +19,14 @@ pub struct KostDto {
 pub struct AppStateRespose {
     pub users: Vec<UserDto>,
     pub kosts: Vec<KostDto>,
+}
+
+// Handle create new user from frontend
+
+#[derive(Deserialize)]
+pub struct CreateUserDto {
+    pub username: String,
+    pub password: String,
+    pub user_role: String,
+    pub user_id: u64,
 }
