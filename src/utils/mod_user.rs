@@ -1,6 +1,6 @@
 // User database
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
+use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Users {
@@ -28,7 +28,7 @@ pub struct User {
     pub username: String,
     pub password: String,
     pub user_role: Role,
-    pub user_id: u64,
+    pub user_id: Uuid,
 }
 
 impl User {
@@ -40,7 +40,7 @@ impl User {
             username,
             password,
             user_role: Role::Admin,
-            user_id: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            user_id: Uuid::new_v4()
         }
     }
 }
@@ -70,24 +70,24 @@ mod test {
             username: "admin2".to_string(), 
             password: "123456".to_string(), 
             user_role: Role::Admin,
-            user_id: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            user_id: new_user.user_id,
         })
     }
 
     #[test]
     fn new_users() {
+        let new_users = Users::new();
         let expected: Users = Users {
             list: vec![
                 User {
                     username: "admin1".to_string(),
                     password: "123456".to_string(),
                     user_role: Role::Admin,
-                    user_id: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+                    user_id: new_users.list[0].user_id,
                 }
             ]
         };
 
-        let new_users = Users::new();
 
         assert_eq!(new_users, expected);
     }

@@ -1,6 +1,7 @@
 // Database for the Kost
 
 use chrono::{Local, NaiveDate, Datelike};
+use uuid::Uuid;
 use crate::utils::mod_user::*;
 
 
@@ -17,12 +18,12 @@ impl Kosts {
 #[derive(Debug)]
 pub struct Kost {
     pub rooms: Vec<KostRooms>,
-    pub user_id: u64,
+    pub user_id: Uuid,
 }
 
 impl Kost {
     // num of room used to determine how many room in the Kost
-    pub fn new(num_of_rooms: u32, user_id: u64) -> Self {
+    pub fn new(num_of_rooms: u32, user_id: Uuid) -> Self {
         let mut rooms: Vec<KostRooms> = Vec::with_capacity(num_of_rooms as usize);
 
         for _ in 0..num_of_rooms {
@@ -159,6 +160,8 @@ fn send_reminder(email: &str, contact: &str) {
 
 #[cfg(test)]
 mod test {
+    use uuid::Uuid;
+
     use super::*;
     // Test for KostRooms
     #[test]
@@ -227,7 +230,7 @@ mod test {
             username: "admin1".to_string(),
             password: "123456".to_string(),
             user_role: crate::utils::mod_user::Role::Admin,
-            user_id: 12345678,
+            user_id: Uuid::new_v4(),
         };
 
         let kost: Kost = Kost::new(10, user.user_id);

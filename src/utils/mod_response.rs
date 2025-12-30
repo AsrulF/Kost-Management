@@ -1,17 +1,18 @@
-use serde::{Deserialize, Serialize}; 
+use serde::{Deserialize, Serialize};
+use uuid::Uuid; 
 
 // Handle AppState for frontend
 
 #[derive(Serialize)]
 pub struct UserDto {
     pub username: String,
-    pub user_id: u64,
+    pub user_id: Uuid,
     pub user_role: String,
 }
 
 #[derive(Serialize)]
 pub struct KostDto {
-    pub kost_id: u64,
+    pub kost_id: Uuid,
     pub kost_rooms: u8,
 }
 
@@ -28,5 +29,4 @@ pub struct CreateUserDto {
     pub username: String,
     pub password: String,
     pub user_role: String,
-    pub user_id: u64,
 }

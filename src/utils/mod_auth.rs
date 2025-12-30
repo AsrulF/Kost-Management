@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use jsonwebtoken::{encode, EncodingKey,Header};
 use chrono::{Utc, Duration};
 use dotenvy::dotenv;
+use uuid::Uuid;
 use std::env;
 
 use crate::utils::mod_user::{LoginError, User, Users};
@@ -24,7 +25,7 @@ pub struct LoginRequest {
 // Struct for create token
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: u64,
+    pub sub: Uuid,
     pub username: String,
     pub exp: usize,
 }
@@ -61,7 +62,7 @@ pub fn create_jwt(user: &User) -> Result<String, LoginError> {
         .timestamp() as usize;
 
     let claims = Claims {
-        sub: user.user_id,
+        sub: user.user_id.clone(),
         username: user.username.clone(),
         exp: expiration,
     };

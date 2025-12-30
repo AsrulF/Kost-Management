@@ -100,6 +100,8 @@ async fn main() -> std::io::Result<()> {
                     .allow_any_origin()   
             )
             .service(login_handle)
+            .service(create_user)
+            .service(get_app_data)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
