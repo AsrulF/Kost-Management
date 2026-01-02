@@ -18,8 +18,15 @@ impl Users {
         }
     }
 
-    pub fn add_user(&mut self, user: User) {
-        self.list.push(user);
+    pub fn add_user(&mut self, new_user: User) -> Result<(), UserError> {
+        let new_username = new_user.username.to_ascii_lowercase();
+
+        if self.list.iter().any(|user| user.username.to_ascii_lowercase() == new_username) {
+            return Err(UserError::UsernameAlreadyExist);
+        }
+
+        self.list.push(new_user);
+        Ok(())
     }
 }
 
@@ -55,8 +62,11 @@ pub enum Role {
 pub enum LoginError {
     UserNotFound,
     UserIsNotAdmin,
-    InvalidPassword,
     TokenCreationError,
+}
+
+pub enum UserError {
+    UsernameAlreadyExist
 }
 
 #[cfg(test)]

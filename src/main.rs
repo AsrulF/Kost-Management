@@ -1,9 +1,5 @@
 use crate::utils::{
-    mod_auth::{LoginRequest, login}, 
-    mod_data::{Kost, Kosts}, 
-    mod_user::{User, Users, Role}, 
-    mod_response::*,
-    state::AppState, 
+    mod_auth::{LoginRequest, login}, mod_data::{Kost, Kosts}, mod_response::*, mod_user::{Role, User, UserError, Users}, state::AppState 
 };
 use actix_web::{App, HttpResponse, HttpServer, Responder, get, post, web};
 use actix_cors::Cors;
@@ -38,13 +34,20 @@ async fn create_user(
     state: web::Data<AppState>,
     payload: web::Json<CreateUserDto>,
 ) -> impl Responder {
-    let mut users = state.user_db.lock().unwrap();
+    let mut users = match state.user_db.lock() {
+        Ok(guard) => guard,
+        Err(_) => {
+            return HttpResponse::InternalServerError()
+                .body("Failed to  acquire user database lock")
+        }
+    };
 
     let user = User::new(payload.username.clone(), payload.password.clone());
 
-    users.add_user(user);
-
-    HttpResponse::Ok().json(&users.list)
+    match users.add_user(user) {
+        Ok(_) => HttpResponse::Created().finish(),
+        Err(_e) => HttpResponse::Conflict().body("Username already existed") 
+    }
 }
 
 #[get("/app-data")]
