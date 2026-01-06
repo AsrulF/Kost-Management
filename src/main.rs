@@ -2,14 +2,21 @@ use axum::{Router, Extension};
 use dotenvy::dotenv;
 use std::net::SocketAddr;
 
+mod config;
+mod models;
+mod utils;
+
 #[tokio::main]
 async fn main() {
     // Load the environment file
     dotenv().ok();
 
+    // Try to connect to database
+    let db = config::database::connect().await;
+
     //Make basic route
-    let app: Router<_> = Router::new()
-        .layer(Extension(()));
+    let app = Router::new()
+        .layer(Extension(db));
 
     //Take port from environment variable,
     let port = std::env::var("APP_PORT")
