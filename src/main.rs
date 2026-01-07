@@ -5,6 +5,10 @@ use std::net::SocketAddr;
 mod config;
 mod models;
 mod utils;
+mod middlewares;
+mod schemas;
+mod handlers;
+mod routes;
 
 #[tokio::main]
 async fn main() {
@@ -16,6 +20,7 @@ async fn main() {
 
     //Make basic route
     let app = Router::new()
+        .merge(routes::auth_routes::auth_routes())
         .layer(Extension(db));
 
     //Take port from environment variable,
