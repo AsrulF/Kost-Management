@@ -67,7 +67,7 @@ pub async fn register(
     let user_id = Uuid::new_v4();
 
     let result = sqlx::query!(
-        "INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)",
+        "INSERT INTO Users (id, name, email, password) VALUES (?, ?, ?, ?)",
         user_id,
         payload.name,
         payload.email,
@@ -82,7 +82,7 @@ pub async fn register(
             let user = sqlx::query!(
                 r#"
                 SELECT id AS "id: Uuid", name, email, created_at, updated_at
-                FROM users
+                FROM Users
                 WHERE id = ?
                 "#,
                 user_id
