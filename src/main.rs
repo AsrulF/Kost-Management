@@ -21,6 +21,7 @@ async fn main() {
     //Make basic route
     let app = Router::new()
         .merge(routes::auth_routes::auth_routes())
+        .merge(routes::user_route::user_routes())
         .layer(Extension(db));
 
     //Take port from environment variable,

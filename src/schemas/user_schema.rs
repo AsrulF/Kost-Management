@@ -16,6 +16,7 @@ pub struct UserNewRequest {
     pub password: String,
 }
 
+#[derive(Debug, Serialize)]
 pub struct UserNewResponse {
     pub id: Uuid,
     pub name: String,
