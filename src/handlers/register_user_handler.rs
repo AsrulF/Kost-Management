@@ -103,7 +103,7 @@ pub async fn register(
                     (
                         //Send 201 response Created
                         StatusCode::CREATED,
-                        Json(ApiResponse::succes(
+                        Json(ApiResponse::success(
                             "Register success", 
                             json!(response)    
                         ))

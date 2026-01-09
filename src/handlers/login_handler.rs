@@ -102,7 +102,7 @@ pub async fn login(
                     };
                     (
                         StatusCode::OK,
-                        Json(ApiResponse::succes(
+                        Json(ApiResponse::success(
                             "Login success", 
                             json!(response),
                         ))

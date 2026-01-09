@@ -9,7 +9,7 @@ pub struct ApiResponse<T> {
 }
 
 impl<T> ApiResponse<T> {
-    pub fn succes(message: &str, data: T) -> Self {
+    pub fn success(message: &str, data: T) -> Self {
         Self {
             status: true,
             message: message.to_string(),

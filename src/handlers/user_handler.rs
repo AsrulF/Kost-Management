@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use axum::{
     Extension,
     Json,
-    http::StatusCode
+    http::StatusCode,
+    extract::Path,
 };
 
 use bcrypt::hash;
@@ -27,6 +28,7 @@ use crate::schemas::user_schema::{
 //Import API response from utils
 use crate::utils::response::ApiResponse;
 
+//Handler to get all users data
 pub async fn index(
     Extension(db): Extension<MySqlPool>,
 ) -> (StatusCode, Json<ApiResponse<Value>>) {
@@ -58,13 +60,14 @@ pub async fn index(
 
     (
         StatusCode::OK,
-        Json(ApiResponse::succes(
+        Json(ApiResponse::success(
             "User List", 
             json!(users)
         ))
     )
 }
 
+//Handler to create new user
 pub async fn store(
     Extension(db): Extension<MySqlPool>,
     Json(payload): Json<UserNewRequest>
@@ -149,7 +152,7 @@ pub async fn store(
                     (
                         //Send 201 response Created
                         StatusCode::CREATED,
-                        Json(ApiResponse::succes(
+                        Json(ApiResponse::success(
                             "User created succesfully", 
                             json!(response)))
                     )
@@ -184,5 +187,61 @@ pub async fn store(
             }
         } 
     }
+}
+
+//Handler to get user data by ID
+pub async fn get_user_by_id(
+    Path(id): Path<Uuid>,
+    Extension(db) : Extension<MySqlPool>,
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+
+    //Get user data by id
+    let user = match sqlx::query!(
+        r#"
+        SELECT id AS "id: Uuid", name, email, created_at, updated_at
+        FROM Users
+        Where id = ?
+        "#,
+        id
+    ) 
+    .fetch_one(&db)
+    .await
+    {
+        Ok(user) => user,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                //Send 404 responds Not Found
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "User not found"
+                ))
+            );
+        },
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return (
+                //Send 500 responds Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "Failed to fetch user"
+                ))
+            );
+        }
+    };
+
+    let response = UserNewResponse {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+    };
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            "User Details", 
+            json!(response)))
+    )
 }
 
