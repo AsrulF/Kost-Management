@@ -22,7 +22,8 @@ use crate::models::user::User;
 //Import user schema
 use crate::schemas::user_schema::{
     UserNewRequest,
-    UserNewResponse
+    UserNewResponse, 
+    UserUpdateRequest,
 };
 
 //Import API response from utils
@@ -245,3 +246,193 @@ pub async fn get_user_by_id(
     )
 }
 
+#[axum::debug_handler]
+pub async fn update_user(
+    Extension(db) : Extension<MySqlPool>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UserUpdateRequest>
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+    //Validate the request
+    if let Err(e) = payload.validate() {
+        let mut field_errors: HashMap<String, Vec<String>> = HashMap::new();
+
+        for (field, errors) in e.field_errors() {
+            let messages = errors
+                .iter()
+                .filter_map(|e| e.message.as_ref())
+                .map(|m| m.to_string())
+                .collect::<Vec<String>>();
+
+            field_errors.insert(field.to_string(), messages);
+        }
+
+        return (
+            //Send 422 response Unprocessable Entity
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ApiResponse {
+                status: false,
+                message: "Failed to validate".to_string(),
+                data: Some(json!(field_errors))
+            })
+        );
+    };
+
+    if let Some(password) = &payload.password {
+        if !password.is_empty() && password.len() < 6 {
+            let mut errors: HashMap<String, Vec<String>> = HashMap::new();
+            errors.insert(
+                "password".to_string(), 
+                vec!["Password must be 6 characters".to_string()]
+            );
+
+            return (
+                //Send 422 response Unprocessable Entity
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(ApiResponse {
+                    status: false,
+                    message: "Failed to validate password".to_string(),
+                    data: Some(json!(errors)),
+                })
+            );
+        }
+    };
+
+    //Check if user exist
+    let user_exist = match sqlx::query!(
+        "SELECT id FROM Users Where id = ?",
+        id
+    )
+    .fetch_one(&db)
+    .await
+    {
+        Ok(user) => user,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                //Send 404 response Not Found
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "User with provided id is not found"
+                ))
+            );
+        },
+        Err(_) => {
+            return (
+                //Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "System error"
+                ))
+            );
+        }
+    };
+
+    //Check email uniqueness
+    let email_exists = sqlx::query!(
+        "SELECT id FROM Users WHERE email = ? AND id != ?",
+        payload.email,
+        user_exist.id
+    )
+    .fetch_optional(&db)
+    .await;
+
+    if let Ok(Some(_)) = email_exists {
+        return (
+            //Send conflict response
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error(
+                "Email has been registered",
+            ))
+        );
+    }
+
+    //Update user
+    let result = match &payload.password {
+        Some(password) if !password.is_empty() => {
+            //Hash password using Bcrypt
+            let hashed = match hash(password, 10) {
+                Ok(h) => h,
+                Err(_) => {
+                    return (
+                        //Send 500 response Internal Server Error
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ApiResponse::error(
+                            "Failed to encrypt password",
+                        ))
+                    );
+                }
+            };
+            
+            sqlx::query!(
+                "UPDATE Users SET name = ?, email = ?, password = ? WHERE id = ?",
+                payload.name,
+                payload.email,
+                hashed,
+                id
+            )
+            .execute(&db)
+            .await
+        },
+        _ => {
+            //Update user without password
+            sqlx::query!(
+                "UPDATE Users SET name = ?, email = ? WHERE id = ?",
+                payload.name,
+                payload.email,
+                id
+            )
+            .execute(&db)
+            .await
+        }
+    };
+
+    if let Err(_) = result {
+        return (
+            //Send 500 response Internal Server Error
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "Failed to update user",
+            ))
+        );
+    }
+
+    //Get new user data
+    let user = sqlx::query!(
+        r#"
+        SELECT id AS "id: Uuid", name, email, created_at, updated_at
+        FROM Users
+        WHERE id =?
+        "#,
+        id
+    )
+    .fetch_one(&db)
+    .await;
+
+    match user {
+        Ok(user) => {
+            let response = UserNewResponse {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                created_at: user.created_at,
+                updated_at: user.updated_at,
+            };
+
+            return (
+                //Send 200 response Ok
+                StatusCode::OK,
+                Json(ApiResponse::success(
+                    "User updated successfully", 
+                    json!(response))),
+            );
+        },
+        Err(_) => {
+            return (
+                //Send 500 Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "Failed to get recent updated user data",
+                ))
+            );
+        }
+    }
+}

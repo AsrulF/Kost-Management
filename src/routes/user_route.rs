@@ -1,7 +1,7 @@
 use axum::{
-    Router,
-    routing::{get, post},
-    middleware
+    Router, 
+    middleware, 
+    routing::{get, post, put},
 };
 
 //Import user handler
@@ -9,6 +9,7 @@ use crate::handlers::user_handler::{
     index,
     store,
     get_user_by_id,
+    update_user,
 };
 
 //Import auth middleware
@@ -22,6 +23,8 @@ pub fn user_routes() -> Router {
         .route("/api/users", post(store))
         // GET /api/users/{id} -> get user by id
         .route("/api/users/{id}", get(get_user_by_id))
+        // PUT /api/users/{id} -> update user's data
+        .route("/api/users/{id}", put(update_user))
         // Guard protector for all route above, make sure user must logged in
         .layer(middleware::from_fn(auth))
 }
