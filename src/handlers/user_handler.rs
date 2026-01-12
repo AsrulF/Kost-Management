@@ -436,3 +436,65 @@ pub async fn update_user(
         }
     }
 }
+
+pub async fn delete_user(
+    Path(id): Path<Uuid>,
+    Extension(db) : Extension<MySqlPool>,
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+    //Check user
+    let user = match sqlx::query!(
+        "SELECT id FROM Users WHERE id = ?",
+        id
+    )
+    .fetch_one(&db)
+    .await {
+        Ok(user) => user,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                //Send 404 response Not Found
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "User with provided id is not found",
+                ))
+            );
+        },
+        Err(e) => {
+            eprintln!("Database error : {}", e);
+            return (
+                //Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "System Error"
+                ))
+            );
+        }
+    };
+
+    //Delete user from database
+    let result = sqlx::query!(
+        "DELETE FROM Users WHERE id = ?",
+        id
+    )
+    .execute(&db)
+    .await;
+
+    match result {
+        Ok(_) => (
+            //Send 200 response ok
+            StatusCode::OK,
+            Json(ApiResponse::success(
+                "User has been deleted", 
+                json!(null)))
+        ),
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            (
+                //Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "Failed to delete user",
+                ))
+            )
+        } 
+    }
+}
