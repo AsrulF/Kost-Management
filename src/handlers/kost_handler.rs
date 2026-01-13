@@ -26,13 +26,14 @@ use crate::schemas::kost_schema::{
     KostNewResponse
 };
 
+use crate::utils::jwt::Claims;
 // Import API response form utils
 use crate::utils::response::ApiResponse;
 
 // Handler to create new kost
 pub async fn create_new_kost(
     Extension(db): Extension<MySqlPool>,
-    Path(id): Path<Uuid>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<KostNewRequest>
 ) -> (StatusCode, Json<ApiResponse<Value>>) {
     // Validate the request
@@ -60,39 +61,9 @@ pub async fn create_new_kost(
         );
     }
 
-    // Check user id in database
-    let user = match sqlx::query_as!(
-        User,
-        r#"
-        SELECT id AS "id: Uuid", name, email, created_at, updated_at FROM Users WHERE Id = ?
-        "#,
-        id
-    ).fetch_one(&db)
-    .await {
-        Ok(user) => user,
-        Err(sqlx::Error::RowNotFound) => {
-            return (
-                //Send 404 response Not Found,
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error(
-                    "User with provided ID is not found"
-                ))
-            );
-        }
-        Err(_) => {
-            return (
-                //Send 500 response Internal Server Error
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(
-                    "System error"
-                ))
-            );
-        }
-    };
-
     // Insert new kost to database
     let kost_id = Uuid::new_v4();
-    let kost_user_id = user.id;
+    let kost_user_id = claims.sub;
 
     let result = sqlx::query!(
         "INSERT INTO Kosts (id, user_id, kost_name, kost_address, kost_contact) VALUES (?, ?, ?, ? ,?)",
