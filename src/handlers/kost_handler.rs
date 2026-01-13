@@ -4,7 +4,6 @@ use axum::{
     Extension,
     Json,
     http::StatusCode,
-    extract::Path,
 };
 use sqlx::MySqlPool;
 use serde_json::{
@@ -16,9 +15,6 @@ use validator::Validate;
 
 // Import kost models
 use crate::models::kost::Kost;
-
-//Import user modeld
-use crate::models::user::User;
 
 // Import kost schema
 use crate::schemas::kost_schema::{
@@ -132,4 +128,43 @@ pub async fn create_new_kost(
         }
     }
 
+}
+
+// Handler to get all kost
+pub async fn get_all_kosts(
+    Extension(db): Extension<MySqlPool>,
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+    // Get all kost data
+    let kosts = match sqlx::query_as!(
+        Kost,
+        r#"
+        SELECT id AS "id: Uuid", user_id AS "user_id: Uuid", kost_name, kost_address, kost_contact, created_at, updated_at
+        FROM Kosts
+        ORDER BY kost_name DESC
+        "#,
+    )
+    .fetch_all(&db)
+    .await
+    {
+        Ok(kosts) => kosts,
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            );
+        }
+    };
+
+    (
+        // Send 200 response Ok
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            "Kosts List", 
+            json!(kosts),
+        ))
+    )
 }

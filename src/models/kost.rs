@@ -2,6 +2,7 @@ use serde::{Serialize};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+#[derive(Serialize)]
 pub struct Kost {
     pub id: Uuid,
     pub user_id: Uuid,
