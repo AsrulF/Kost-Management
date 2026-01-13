@@ -1,6 +1,7 @@
 use axum::{Router, Extension};
 use dotenvy::dotenv;
 use std::net::SocketAddr;
+use tower_http::cors::{CorsLayer, Any};
 
 mod config;
 mod models;
@@ -18,11 +19,19 @@ async fn main() {
     // Try to connect to database
     let db = config::database::connect().await;
 
+    // Cors configuration
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     //Make basic route
     let app = Router::new()
         .merge(routes::auth_routes::auth_routes())
         .merge(routes::user_route::user_routes())
-        .layer(Extension(db));
+        .merge(routes::kost_route::kost_route())
+        .layer(Extension(db))
+        .layer(cors);
 
     //Take port from environment variable,
     let port = std::env::var("APP_PORT")
