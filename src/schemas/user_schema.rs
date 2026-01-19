@@ -6,6 +6,14 @@ use chrono::{DateTime, Utc};
 use validator::Validate;
 use uuid::Uuid;
 
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq, PartialOrd)]
+#[sqlx(type_name = "ENUM")]
+#[serde(rename_all = "UPPERCASE")]
+pub enum Role {
+    ADMIN,
+    MEMBER,
+}
+
 #[derive(Deserialize, Validate)]
 pub struct UserNewRequest {
     #[validate(length(min = 3, message = "Name cannot be less than 3 characters"))]

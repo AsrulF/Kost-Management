@@ -16,9 +16,6 @@ use serde_json::{
 use uuid::Uuid;
 use validator::Validate;
 
-//Import user models
-use crate::models::user::User;
-
 //Import user schema
 use crate::schemas::user_schema::{
     UserNewRequest,
@@ -26,13 +23,34 @@ use crate::schemas::user_schema::{
     UserUpdateRequest,
 };
 
+// Import user models
+use crate::models::user::User;
+
+// Import claims from utils
+use crate::utils::jwt::Claims;
+
 //Import API response from utils
 use crate::utils::response::ApiResponse;
+
+// Import role enum from user schema
+use crate::schemas::user_schema::Role;
 
 //Handler to get all users data
 pub async fn index(
     Extension(db): Extension<MySqlPool>,
+    Extension(claims): Extension<Claims>,
 ) -> (StatusCode, Json<ApiResponse<Value>>) {
+
+    //
+    if claims.role != Role::ADMIN {
+        return (
+            // Send forbidden response
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error(
+                "Only Admin can access"
+            ))
+        );
+    }
 
     //Get all user data
     let users = match sqlx::query_as!(
@@ -246,6 +264,7 @@ pub async fn get_user_by_id(
     )
 }
 
+// Handler to update user data
 #[axum::debug_handler]
 pub async fn update_user(
     Extension(db) : Extension<MySqlPool>,
@@ -437,6 +456,7 @@ pub async fn update_user(
     }
 }
 
+// Handler to delete user data
 pub async fn delete_user(
     Path(id): Path<Uuid>,
     Extension(db) : Extension<MySqlPool>,

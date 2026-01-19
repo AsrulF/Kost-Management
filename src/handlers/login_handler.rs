@@ -23,6 +23,9 @@ use crate::utils::{
     response::ApiResponse,
 };
 
+// Import Role from user schema
+use crate::schemas::user_schema::Role;
+
 pub async fn login(
     Extension(db): Extension<MySqlPool>,
     Json(payload): Json<LoginRequest>
@@ -56,7 +59,7 @@ pub async fn login(
     //Fetch user by email
     let user = match sqlx::query!(
         r#"
-        SELECT id AS "id: Uuid", name, email, password 
+        SELECT id AS "id: Uuid", name, email, password, role AS "role: Role"
         FROM Users 
         WHERE email = ?
         "#,
@@ -90,7 +93,7 @@ pub async fn login(
     //Verify password using bcrypt
     match verify(payload.password, &user.password) {
         Ok(true) => {
-            match generate_token(user.id) {
+            match generate_token(user.id, user.role) {
                 Ok(token) => {
                     let response = LoginResponse {
                         user: UserResponse {
