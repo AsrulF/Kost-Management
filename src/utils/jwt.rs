@@ -6,18 +6,16 @@ use uuid::Uuid;
 use serde::{Serialize, Deserialize};
 use chrono::{Utc, Duration};
 
-// Import user role enum from user schemas
-use crate::schemas::user_schema::Role;
-
 #[derive(Serialize,Deserialize, Clone)]
 pub struct Claims {
     pub sub: Uuid,
-    pub role: Role,
+    pub role: String,
+    pub permissions: Vec<String>,
     pub exp: usize,
 }
 
 //Helper function to generate jwt token
-pub fn generate_token(user_id: Uuid, user_role: Role) -> Result<String, JwtError> {
+pub fn generate_token(user_id: Uuid, user_role: String, permissions: Vec<String>) -> Result<String, JwtError> {
     //Set expiration token to 24 hours
     let exp = Utc::now()
         .checked_add_signed(Duration::hours(24))
@@ -30,6 +28,7 @@ pub fn generate_token(user_id: Uuid, user_role: Role) -> Result<String, JwtError
         &Claims {
             sub: user_id,
             role: user_role,
+            permissions,
             exp,
         },
         &EncodingKey::from_secret(

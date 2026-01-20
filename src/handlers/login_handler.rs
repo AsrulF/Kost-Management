@@ -23,9 +23,6 @@ use crate::utils::{
     response::ApiResponse,
 };
 
-// Import Role from user schema
-use crate::schemas::user_schema::Role;
-
 pub async fn login(
     Extension(db): Extension<MySqlPool>,
     Json(payload): Json<LoginRequest>
@@ -59,9 +56,16 @@ pub async fn login(
     //Fetch user by email
     let user = match sqlx::query!(
         r#"
-        SELECT id AS "id: Uuid", name, email, password, role AS "role: Role"
-        FROM Users 
-        WHERE email = ?
+        SELECT
+            u.id AS "id: Uuid",
+            u.name,
+            u.email,
+            u.password,
+            u.role_id AS "role_id: Uuid",
+            r.name AS "role"
+        FROM Users u
+        JOIN Roles r ON r.id = u.role_id
+        WHERE u.email = ?
         "#,
         payload.email
     )
@@ -90,10 +94,24 @@ pub async fn login(
         }
     };
 
+    // Get permissions based on the current user role
+    let permissions = sqlx::query_scalar!(
+        r#"
+        SELECT p.name
+        FROM Role_Permissions rp
+        JOIN Permissions p ON p.id = rp.permission_id
+        WHERE rp.role_id = ?
+        "#,
+        user.role_id
+    )
+    .fetch_all(&db)
+    .await
+    .expect("Error getting the permissions");
+
     //Verify password using bcrypt
     match verify(payload.password, &user.password) {
         Ok(true) => {
-            match generate_token(user.id, user.role) {
+            match generate_token(user.id, user.role, permissions) {
                 Ok(token) => {
                     let response = LoginResponse {
                         user: UserResponse {

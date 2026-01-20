@@ -32,9 +32,6 @@ use crate::utils::jwt::Claims;
 //Import API response from utils
 use crate::utils::response::ApiResponse;
 
-// Import role enum from user schema
-use crate::schemas::user_schema::Role;
-
 //Handler to get all users data
 pub async fn index(
     Extension(db): Extension<MySqlPool>,
@@ -42,7 +39,7 @@ pub async fn index(
 ) -> (StatusCode, Json<ApiResponse<Value>>) {
 
     //
-    if claims.role != Role::ADMIN {
+    if claims.role != "ADMIN" {
         return (
             // Send forbidden response
             StatusCode::FORBIDDEN,
