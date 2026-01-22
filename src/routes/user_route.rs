@@ -30,7 +30,11 @@ pub fn user_routes() -> Router {
         // POST /api/users -> create new user
         .route("/api/users", post(store))
         // GET /api/users/{id} -> get user by id
-        .route("/api/users/{id}", get(get_user_by_id))
+        .route(
+            "/api/users/{id}", 
+            get(get_user_by_id)
+                .layer(from_fn(require_permission_admin))
+        )
         // PUT /api/users/{id} -> update user's data
         .route("/api/users/{id}", put(update_user))
         // POST /api/users/{id} -> delete user

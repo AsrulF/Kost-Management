@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use axum::extract::Path;
 use axum::{
     Extension,
     Json,
@@ -166,5 +167,70 @@ pub async fn get_all_kosts(
             "Kosts List", 
             json!(kosts),
         ))
+    )
+}
+
+pub async fn get_kost_by_id(
+    Path(id): Path<Uuid>,
+    Extension(db): Extension<MySqlPool>
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+
+    // Get kost data by kost id
+    let kost = match sqlx::query!(
+        r#"
+            SELECT 
+                id AS "id: Uuid", 
+                user_id AS "user_id: Uuid",
+                kost_name,
+                kost_address,
+                kost_contact,
+                created_at,
+                updated_at
+            FROM Kosts
+            WHERE id = ?
+        "#,
+        id
+    )
+    .fetch_one(&db)
+    .await
+    {
+        Ok(kost) => kost,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                // Send 404 response Not Found
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "Kost not found"
+                ))
+            );
+        },
+        Err(e) => {
+            eprintln!("{}", e);
+            return (
+                // Send 500 response Iternal Server Error,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "Failed to get kost data"
+                ))
+            );
+        }
+    };
+
+    let response = KostNewResponse {
+        id: kost.id,
+        user_id: kost.user_id,
+        kost_name: kost.kost_name,
+        kost_address: kost.kost_address,
+        kost_contact: kost.kost_contact,
+        created_at: kost.created_at,
+        updated_at: kost. updated_at,
+    };
+
+    (
+        // Send 200 response Ok
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            "Kost details", 
+            json!(response))),
     )
 }

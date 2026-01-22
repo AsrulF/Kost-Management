@@ -1,5 +1,3 @@
-use core::error;
-
 use axum::{
     Json, 
     extract::Request, 
@@ -40,6 +38,7 @@ pub async fn require_permission_admin(
             if !has_permission(claims, &admin_permission) {
                 return Err(
                     (
+                        // Send 402 response Forbidden
                         StatusCode::FORBIDDEN,
                         Json(ApiResponse::<()>::error(
                             "Only Admin can access"
@@ -53,13 +52,57 @@ pub async fn require_permission_admin(
         None => {
             return Err(
                 (
-                    // Send 401 response Forbidden
+                    // Send 401 response Unauthorized
                     StatusCode::UNAUTHORIZED,
                     Json(ApiResponse::<()>::error(
                         "Please login first"
                     ))
                 )
             )
+        }
+    }
+}
+
+pub async fn require_permission_owner(
+    mut req: Request,
+    next: Next,
+) -> Result<Response, PermissionsError> {
+    let owner_permissions = vec![
+        "kost:create",
+        "kost:update",
+        "kost:delete",
+        "kost:view",
+    ];
+
+    let claims = req
+        .extensions()
+        .get::<Claims>();
+
+    match claims {
+        Some(claims) => {
+            if !has_permission(claims, &owner_permissions) {
+                return Err(
+                    (
+                        // Send 403 response forbidden
+                        StatusCode::FORBIDDEN,
+                        Json(ApiResponse::error(
+                            "Only Owner of this kost can access"
+                        ))
+                    )
+                );
+            }
+
+            Ok(next.run(req).await)
+        }
+        None => {
+            return Err(
+                (   // Send 401 response Unauthorized
+                    StatusCode::UNAUTHORIZED,
+                    Json(ApiResponse::error(
+                    "Please login first"
+                    ))
+                )
+            );
         }
     }
 }

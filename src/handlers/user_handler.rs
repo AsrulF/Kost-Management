@@ -26,9 +26,6 @@ use crate::schemas::user_schema::{
 // Import user models
 use crate::models::user::User;
 
-// Import claims from utils
-use crate::utils::jwt::Claims;
-
 //Import API response from utils
 use crate::utils::response::ApiResponse;
 

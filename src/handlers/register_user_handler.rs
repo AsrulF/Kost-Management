@@ -106,7 +106,7 @@ pub async fn register(
     .await;
 
     match result {
-        Ok(result) => {
+        Ok(_result) => {
             //Get user data by user id
             let user = sqlx::query!(
                 r#"
