@@ -1,7 +1,7 @@
 use axum::{
     Router, 
-    middleware, 
-    routing::{get, post, put, delete},
+    middleware::{self, from_fn}, 
+    routing::{delete, get, post, put},
 };
 
 //Import user handler
@@ -16,10 +16,17 @@ use crate::handlers::user_handler::{
 //Import auth middleware
 use crate::middlewares::auth_middleware::auth;
 
+// Import permission middleware
+use  crate::middlewares::permission_middleware::require_permission_admin;
+
 pub fn user_routes() -> Router {
     Router::new()
         // GET /api/users -> list all users
-        .route("/api/users", get(index))
+        .route(
+            "/api/users", 
+            get(index)
+                .layer(from_fn(require_permission_admin))
+        )
         // POST /api/users -> create new user
         .route("/api/users", post(store))
         // GET /api/users/{id} -> get user by id

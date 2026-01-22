@@ -6,6 +6,9 @@ use chrono::{DateTime, Utc};
 use validator::Validate;
 use uuid::Uuid;
 
+// Import role enum
+use crate::schemas::register_schema::RegRole;
+
 #[derive(Deserialize, Validate)]
 pub struct UserNewRequest {
     #[validate(length(min = 3, message = "Name cannot be less than 3 characters"))]
@@ -14,6 +17,7 @@ pub struct UserNewRequest {
     pub email: String,
     #[validate(length(min = 6, message = "Password must be 6 characters"))]
     pub password: String,
+    pub role: Option<RegRole>,
 }
 
 #[derive(Debug, Serialize)]
@@ -21,6 +25,7 @@ pub struct UserNewResponse {
     pub id: Uuid,
     pub name: String,
     pub email: String,
+    pub role_id: Uuid,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

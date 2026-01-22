@@ -13,7 +13,8 @@ use uuid::Uuid;
 //Import register user request and response schema
 use crate::schemas::register_schema::{
     RegisterRequest,
-    RegisterResponse
+    RegisterResponse,
+    RegRole,
 };
 
 //Import API response from utils
@@ -66,11 +67,39 @@ pub async fn register(
     //Insert user's data to database
     let user_id = Uuid::new_v4();
 
+    let user_role = match payload.role {
+        Some(RegRole::OWNER) => "OWNER",
+        _ => "MEMBER",
+    };
+
+    let role_id = match sqlx::query_scalar!(
+        r#"
+        SELECT id AS "id: Uuid"
+        FROM Roles
+        WHERE name = ?
+        "#,
+        user_role
+    )
+    .fetch_one(&db)
+    .await 
+    {
+        Ok(role_id) => role_id,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref()
+                ))
+            );
+        } 
+    };
+
     let result = sqlx::query!(
-        "INSERT INTO Users (id, name, email, password) VALUES (?, ?, ?, ?)",
+        "INSERT INTO Users (id, name, email, password, role_id) VALUES (?, ?, ?, ?, ?)",
         user_id,
         payload.name,
         payload.email,
+        role_id,
         password
     )
     .execute(&db)
@@ -81,7 +110,7 @@ pub async fn register(
             //Get user data by user id
             let user = sqlx::query!(
                 r#"
-                SELECT id AS "id: Uuid", name, email, created_at, updated_at
+                SELECT id AS "id: Uuid", name, email, role_id AS "role_id: Uuid", created_at, updated_at
                 FROM Users
                 WHERE id = ?
                 "#,
@@ -96,6 +125,7 @@ pub async fn register(
                         id: user.id,
                         name: user.name,
                         email: user.email,
+                        role_id: user.role_id.expect("User role not found"),
                         created_at: user.created_at,
                         updated_at: user.updated_at,
                     };

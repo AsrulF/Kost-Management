@@ -6,7 +6,7 @@ use uuid::Uuid;
 use serde::{Serialize, Deserialize};
 use chrono::{Utc, Duration};
 
-#[derive(Serialize,Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub sub: Uuid,
     pub role: String,

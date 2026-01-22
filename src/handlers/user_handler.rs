@@ -32,28 +32,18 @@ use crate::utils::jwt::Claims;
 //Import API response from utils
 use crate::utils::response::ApiResponse;
 
+// Import Role enum from reg schema
+use crate::schemas::register_schema::RegRole;
+
 //Handler to get all users data
 pub async fn index(
     Extension(db): Extension<MySqlPool>,
-    Extension(claims): Extension<Claims>,
 ) -> (StatusCode, Json<ApiResponse<Value>>) {
-
-    //
-    if claims.role != "ADMIN" {
-        return (
-            // Send forbidden response
-            StatusCode::FORBIDDEN,
-            Json(ApiResponse::error(
-                "Only Admin can access"
-            ))
-        );
-    }
-
     //Get all user data
     let users = match sqlx::query_as!(
         User,
         r#"
-            SELECT id as "id: Uuid", name, email, created_at, updated_at
+            SELECT id as "id: Uuid", name, email, role_id AS "role_id: Uuid", created_at, updated_at
             FROM Users
             ORDER BY name ASC
         "#
@@ -131,12 +121,40 @@ pub async fn store(
     //Insert new user data to database
     let new_user_id = Uuid::new_v4();
 
+    let user_role = match payload.role {
+        Some(RegRole::OWNER) => "OWNER",
+        _ => "MEMBER",
+    };
+
+    let role_id = match sqlx::query_scalar!(
+        r#"
+        SELECT id AS "id: Uuid"
+        FROM Roles
+        WHERE name = ?
+        "#,
+        user_role
+    )
+    .fetch_one(&db)
+    .await 
+    {
+        Ok(role_id) => role_id,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            );
+        }    
+    };
+
     let result = sqlx::query!(
-        "INSERT INTO Users (id, name, email, password) VALUES (?, ?, ?, ?)",
+        "INSERT INTO Users (id, name, email, password, role_id) VALUES (?, ?, ?, ?, ?)",
         new_user_id,
         payload.name,
         payload.email,
-        password
+        password,
+        role_id
     )
     .execute(&db)
     .await;
@@ -146,7 +164,7 @@ pub async fn store(
             //Get newly created user data
             let user = sqlx::query!(
                 r#"
-                    SELECT id AS "id: Uuid", name, email, created_at, updated_at
+                    SELECT id AS "id: Uuid", name, email, role_id AS "role_id: Uuid", created_at, updated_at
                     FROM Users
                     WHERE id = ?
                 "#,
@@ -161,6 +179,7 @@ pub async fn store(
                         id: user.id,
                         name: user.name,
                         email: user.email,
+                        role_id: user.role_id.expect("User role not defined"),
                         created_at: user.created_at,
                         updated_at: user.updated_at
                     };
@@ -214,7 +233,7 @@ pub async fn get_user_by_id(
     //Get user data by id
     let user = match sqlx::query!(
         r#"
-        SELECT id AS "id: Uuid", name, email, created_at, updated_at
+        SELECT id AS "id: Uuid", name, email, role_id AS "role_id: Uuid", created_at, updated_at
         FROM Users
         Where id = ?
         "#,
@@ -249,6 +268,7 @@ pub async fn get_user_by_id(
         id: user.id,
         name: user.name,
         email: user.email,
+        role_id: user.role_id.expect("User role is not set"),
         created_at: user.created_at,
         updated_at: user.updated_at,
     };
@@ -414,7 +434,7 @@ pub async fn update_user(
     //Get new user data
     let user = sqlx::query!(
         r#"
-        SELECT id AS "id: Uuid", name, email, created_at, updated_at
+        SELECT id AS "id: Uuid", name, email, role_id AS "role_id: Uuid", created_at, updated_at
         FROM Users
         WHERE id =?
         "#,
@@ -429,6 +449,7 @@ pub async fn update_user(
                 id: user.id,
                 name: user.name,
                 email: user.email,
+                role_id: user.role_id.expect("User role is not set"),
                 created_at: user.created_at,
                 updated_at: user.updated_at,
             };
