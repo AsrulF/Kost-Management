@@ -20,7 +20,9 @@ use crate::models::kost::Kost;
 // Import kost schema
 use crate::schemas::kost_schema::{
     KostNewRequest,
-    KostNewResponse
+    KostNewResponse,
+    KostUpdateRequest,
+    KostUpdateResponse,
 };
 
 use crate::utils::jwt::Claims;
@@ -170,6 +172,7 @@ pub async fn get_all_kosts(
     )
 }
 
+// Handler to get kost detail
 pub async fn get_kost_by_id(
     Path(id): Path<Uuid>,
     Extension(db): Extension<MySqlPool>
@@ -233,4 +236,144 @@ pub async fn get_kost_by_id(
             "Kost details", 
             json!(response))),
     )
+}
+
+// Handler to update kost data
+pub async fn update_kost(
+    Extension(db): Extension<MySqlPool>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<KostUpdateRequest>,
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+    // Validate the request
+    if let Err(e) = payload.validate() {
+        let mut field_errors: HashMap<String, Vec<String>> = HashMap::new();
+
+        for (field, errors) in e.field_errors() {
+            let messages = errors
+                .iter()
+                .filter_map(|e| e.message.as_ref())
+                .map(|m| m.to_string())
+                .collect::<Vec<String>>();
+
+            field_errors.insert(field.to_string(), messages);
+        }
+
+        return (
+            // Send 422 response Unprocessable Entity
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ApiResponse{
+                status: false,
+                message: "Failed to validate".to_string(),
+                data: Some(json!(field_errors))
+            })
+        );
+    }
+
+    // Check if the kost exist
+    let kost = match sqlx::query!(
+        "
+        SELECT id
+        FROM Kosts
+        WHERE id = ?
+        ",
+        id
+    ) 
+    .fetch_one(&db)
+    .await
+    {
+        Ok(kost) => kost,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                // Send 404 response not found
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "Kost with provided id is not found"
+                ))
+            );
+        },
+        Err(_) => {
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "Server Error"
+                ))
+            );
+        }
+    };
+
+    // Update kost data
+    let result = sqlx::query!(
+        "
+        UPDATE Kosts
+        SET kost_name = ?, kost_address = ?, kost_contact = ?
+        WHERE id = ?
+        ",
+        payload.kost_name,
+        payload.kost_address,
+        payload.kost_contact,
+        id,
+    )
+    .execute(&db)
+    .await;
+
+    if let Err(e) = result {
+        return (
+            // Send 500 response Internal Server Error
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "Server error",
+            ))
+        );
+    }
+
+    // Get kost new data
+    let updated_kost = sqlx::query!(
+        r#"
+        SELECT 
+            id AS "id: Uuid",
+            user_id AS "user_id: Uuid",
+            kost_name,
+            kost_address,
+            kost_contact,
+            created_at,
+            updated_at
+        FROM Kosts
+        WHERE id = ?
+        "#,
+        id
+    )
+    .fetch_one(&db)
+    .await;
+
+    match updated_kost {
+        Ok(updated_kost) => {
+            let response = KostUpdateResponse {
+                id: updated_kost.id,
+                user_id: updated_kost.user_id,
+                kost_name: updated_kost.kost_name,
+                kost_address: updated_kost.kost_address,
+                kost_contact: updated_kost.kost_contact,
+                created_at: updated_kost.created_at,
+                update_at: updated_kost.updated_at,
+            };
+
+            return (
+                // Send 200 response Ok
+                StatusCode::OK,
+                Json(ApiResponse::success(
+                    "Kost updated successfully", 
+                    json!(response))),
+            );
+        },
+        Err(_) => {
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "Server Error",
+                ))
+            );
+        }
+    }
 }
