@@ -64,6 +64,25 @@ pub async fn create_new_kost(
     let kost_id = Uuid::new_v4();
     let kost_user_id = claims.sub;
 
+    // Check kost_name uniqueness
+    let kost_name_exist = sqlx::query!(
+        "SELECT kost_name FROM Kosts WHERE user_id = ? AND kost_name = ?",
+        kost_user_id,
+        payload.kost_name,
+    )
+    .fetch_optional(&db)
+    .await;
+
+    if let Ok(Some(_)) = kost_name_exist {
+        return (
+            // Send 409 response Conflict
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error(
+                "Kost name already exist"
+            ))
+        );
+    }
+
     let result = sqlx::query!(
         "INSERT INTO Kosts (id, user_id, kost_name, kost_address, kost_contact) VALUES (?, ?, ?, ? ,?)",
         kost_id,
@@ -136,40 +155,78 @@ pub async fn create_new_kost(
 // Handler to get all kost
 pub async fn get_all_kosts(
     Extension(db): Extension<MySqlPool>,
+    Extension(claims): Extension<Claims>,
 ) -> (StatusCode, Json<ApiResponse<Value>>) {
     // Get all kost data
-    let kosts = match sqlx::query_as!(
-        Kost,
-        r#"
-        SELECT id AS "id: Uuid", user_id AS "user_id: Uuid", kost_name, kost_address, kost_contact, created_at, updated_at
-        FROM Kosts
-        ORDER BY kost_name DESC
-        "#,
-    )
-    .fetch_all(&db)
-    .await
-    {
-        Ok(kosts) => kosts,
-        Err(e) => {
-            eprintln!("Database error: {}", e);
-            return (
-                // Send 500 response Internal Server Error
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(
-                    e.to_string().as_ref(),
-                ))
-            );
-        }
-    };
+    if claims.role == "ADMIN" {
+        let kosts = match sqlx::query_as!(
+            Kost,
+            r#"
+            SELECT id AS "id: Uuid", user_id AS "user_id: Uuid", kost_name, kost_address, kost_contact, created_at, updated_at
+            FROM Kosts
+            ORDER BY kost_name DESC
+            "#,
+        )
+        .fetch_all(&db)
+        .await
+        {
+            Ok(kosts) => kosts,
+            Err(e) => {
+                eprintln!("Database error: {}", e);
+                return (
+                    // Send 500 response Internal Server Error
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(
+                        e.to_string().as_ref(),
+                    ))
+                );
+            }
+        };
 
-    (
-        // Send 200 response Ok
-        StatusCode::OK,
-        Json(ApiResponse::success(
-            "Kosts List", 
-            json!(kosts),
-        ))
-    )
+        (
+            // Send 200 response Ok
+            StatusCode::OK,
+            Json(ApiResponse::success(
+                "Kosts List", 
+                json!(kosts),
+            ))
+        )
+    } else {
+        let kosts = match sqlx::query_as!(
+            Kost,
+            r#"
+            SELECT id AS "id: Uuid", user_id AS "user_id: Uuid", kost_name, kost_address, kost_contact, created_at, updated_at
+            FROM Kosts
+            WHERE user_id = ?
+            ORDER BY kost_name DESC
+            "#,
+            claims.sub
+        )
+        .fetch_all(&db)
+        .await
+        {
+            Ok(kosts) => kosts,
+            Err(e) => {
+                    eprintln!("Database error: {}", e);
+                    return (
+                        // Send 500 response Internal Server Error
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ApiResponse::error(
+                            e.to_string().as_ref(),
+                        ))
+                    );
+            }
+        };
+
+        (
+            // Send 200 response Ok
+            StatusCode::OK,
+            Json(ApiResponse::success(
+                "Kosts List", 
+                json!(kosts)))
+        )
+        
+    }
 }
 
 // Handler to get kost detail
