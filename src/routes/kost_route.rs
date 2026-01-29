@@ -1,7 +1,7 @@
 use axum::{
     Router,
     middleware::{self, from_fn},
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
 };
 
 // Import kost handler
@@ -10,7 +10,8 @@ use crate::{handlers::kost_handler::{
     get_all_kosts,
     get_kost_by_id,
     update_kost,
-}, middlewares::permission_middleware::require_permission_admin};
+    delete_kost,
+}};
 
 // Import auth middleware
 use crate::middlewares::auth_middleware::auth;
@@ -45,6 +46,11 @@ pub fn kost_route() -> Router {
         .route(
             "/api/kosts/{id}", 
             put(update_kost)
+                .layer(from_fn(require_permission_owner))
+        )
+        .route(
+            "/api/kosts/{id}",
+            delete(delete_kost)
                 .layer(from_fn(require_permission_owner))
         )
         .layer(middleware::from_fn(auth))

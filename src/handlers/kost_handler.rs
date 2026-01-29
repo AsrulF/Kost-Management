@@ -434,3 +434,81 @@ pub async fn update_kost(
         }
     }
 }
+
+// Handler to delete kost
+pub async fn delete_kost(
+    Path(id): Path<Uuid>,
+    Extension(db): Extension<MySqlPool>,
+    Extension(claims): Extension<Claims>,
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+    // Check if the kost exist
+    let kost = match sqlx::query!(
+        r#"SELECT id, user_id AS "user_id: Uuid" FROM Kosts WHERE id = ?"#,
+        id
+    )
+    .fetch_one(&db)
+    .await 
+    {
+        Ok(kost) => kost,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                // Send 404 response Not Found
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "Kost with provided id is not found",
+                ))
+            );
+        },
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            );
+        }
+    };
+
+    // Guard, so only kost owner can delete the kost
+    if kost.user_id != claims.sub {
+        return (
+            // Send 401 response Unauthorized
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::error(
+                "Only kost owner can delete this kost"
+            ))
+        );
+    }
+
+    // Delete the kost
+    let result = sqlx::query!(
+        "DELETE FROM Kosts WHERE id = ?",
+        id
+    )
+    .execute(&db) 
+    .await;
+
+    match result {
+        Ok(_) => {
+            return (
+                // Send 200 response Ok
+                StatusCode::OK,
+                Json(ApiResponse::success(
+                    "Kost deleted successfully", 
+                    json!(null)))
+            );
+        },
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            );
+        }
+    };
+}
