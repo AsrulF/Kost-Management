@@ -53,7 +53,7 @@ CREATE TABLE Rooms (
     kost_id BINARY(16) NOT NULL,
     room_number INT NOT NULL,
     UNIQUE (kost_id, room_number),
-    room_vacancy BOOLEAN DEFAULT false,
+    room_vacancy ENUM('AVAILABLE', 'OCCUPIED', 'MAINTENANCE') NOT NULL DEFAULT 'AVAILABLE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,

@@ -3,7 +3,7 @@ use serde::{
     Deserialize
 };
 use chrono::{
-    Date, DateTime, Utc
+    DateTime, Utc
 };
 use validator::Validate;
 use uuid::Uuid;
@@ -31,7 +31,7 @@ pub struct KostNewResponse {
 
 #[derive(Validate, Deserialize)]
 pub struct KostUpdateRequest {
-    #[validate(length(min = 3, message = "Kost new name mus be more than 3 characters"))]
+    #[validate(length(min = 3, message = "Kost new name must be more than 3 characters"))]
     pub kost_name: String,
     #[validate(required, length(min = 1, message = "Kost new address cannot be empty"))]
     pub kost_address: Option<String>,

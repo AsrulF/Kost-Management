@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use axum::extract::Path;
 use axum::{
     Extension,
     Json,
     http::StatusCode,
+    extract::Path,
 };
 use sqlx::MySqlPool;
 use serde_json::{
