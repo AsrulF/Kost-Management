@@ -36,6 +36,7 @@ use crate::utils::response::ApiResponse;
 // Handler to create new room
 pub async fn create_room(
     Extension(db): Extension<MySqlPool>,
+    Path(kost_id): Path<Uuid>,
     Json(payload): Json<RoomNewRequest>,
 ) -> (StatusCode, Json<ApiResponse<Value>>) {
     // Validate the request
@@ -63,5 +64,9 @@ pub async fn create_room(
         );
     }
 
-    todo!()    
+    // Insert new room to database
+    let room_id = Uuid::new_v4();
+
+    todo!()
+
 }

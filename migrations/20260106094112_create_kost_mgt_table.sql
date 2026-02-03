@@ -40,11 +40,24 @@ CREATE TABLE Kosts (
     kost_name TEXT NOT NULL,
     kost_address TEXT NOT NULL,
     kost_contact VARCHAR(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    kost_desc TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id)
         REFERENCES Users(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE Kost_Images (
+    id BINARY(16) PRIMARY KEY,
+    kost_id BINARY(16) NOT NULL,
+    object_key VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (kost_id)
+        REFERENCES Kosts(id)
         ON DELETE CASCADE
 );
 
@@ -85,3 +98,4 @@ CREATE INDEX idx_kosts_user_id ON Kosts(user_id);
 CREATE INDEX idx_rooms_kost_id ON Rooms(kost_id);
 CREATE INDEX idx_bookings_room_id ON Bookings(room_id);
 CREATE INDEX idx_bookings_user_id ON Bookings(user_id);
+CREATE INDEX idx_kost_images_kost_id ON Kost_Images (kost_id);

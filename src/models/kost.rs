@@ -9,6 +9,7 @@ pub struct Kost {
     pub kost_name: String,
     pub kost_address: String,
     pub kost_contact: String,
+    pub kost_desc: String,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

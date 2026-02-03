@@ -84,12 +84,13 @@ pub async fn create_new_kost(
     }
 
     let result = sqlx::query!(
-        "INSERT INTO Kosts (id, user_id, kost_name, kost_address, kost_contact) VALUES (?, ?, ?, ? ,?)",
+        "INSERT INTO Kosts (id, user_id, kost_name, kost_address, kost_contact, kost_desc) VALUES (?, ?, ?, ?, ?, ?)",
         kost_id,
         kost_user_id,
         payload.kost_name,
         payload.kost_address,
         payload.kost_contact,
+        payload.kost_desc,
     )
     .execute(&db)
     .await;
@@ -100,7 +101,7 @@ pub async fn create_new_kost(
             let kost = sqlx::query_as!(
                 Kost,
                 r#"
-                SELECT id AS "id: Uuid", user_id AS "user_id: Uuid", kost_name, kost_address, kost_contact, created_at, updated_at
+                SELECT id AS "id: Uuid", user_id AS "user_id: Uuid", kost_name, kost_address, kost_contact, kost_desc, created_at, updated_at
                 FROM Kosts
                 WHERE id = ?
                 "#,
@@ -117,6 +118,7 @@ pub async fn create_new_kost(
                         kost_name: kost.kost_name,
                         kost_address: kost.kost_address,
                         kost_contact: kost.kost_contact,
+                        kost_desc: kost.kost_desc,
                         created_at: kost.created_at,
                         updated_at: kost.updated_at,
                     };
@@ -162,7 +164,7 @@ pub async fn get_all_kosts(
         let kosts = match sqlx::query_as!(
             Kost,
             r#"
-            SELECT id AS "id: Uuid", user_id AS "user_id: Uuid", kost_name, kost_address, kost_contact, created_at, updated_at
+            SELECT id AS "id: Uuid", user_id AS "user_id: Uuid", kost_name, kost_address, kost_contact, kost_desc, created_at, updated_at
             FROM Kosts
             ORDER BY kost_name DESC
             "#,
@@ -195,7 +197,7 @@ pub async fn get_all_kosts(
         let kosts = match sqlx::query_as!(
             Kost,
             r#"
-            SELECT id AS "id: Uuid", user_id AS "user_id: Uuid", kost_name, kost_address, kost_contact, created_at, updated_at
+            SELECT id AS "id: Uuid", user_id AS "user_id: Uuid", kost_name, kost_address, kost_contact, kost_desc, created_at, updated_at
             FROM Kosts
             WHERE user_id = ?
             ORDER BY kost_name DESC
@@ -232,6 +234,7 @@ pub async fn get_all_kosts(
 // Handler to get kost detail
 pub async fn get_kost_by_id(
     Path(id): Path<Uuid>,
+    Extension(claims): Extension<Claims>,
     Extension(db): Extension<MySqlPool>
 ) -> (StatusCode, Json<ApiResponse<Value>>) {
 
@@ -244,6 +247,7 @@ pub async fn get_kost_by_id(
                 kost_name,
                 kost_address,
                 kost_contact,
+                kost_desc,
                 created_at,
                 updated_at
             FROM Kosts
@@ -276,12 +280,24 @@ pub async fn get_kost_by_id(
         }
     };
 
+    // Guard, only matched user id can access the kost
+    if kost.user_id != claims.sub {
+        return (
+            // Send 401 response Unauthorized
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::error(
+                "Only owner can access this kost",
+            ))
+        )
+    }
+
     let response = KostNewResponse {
         id: kost.id,
         user_id: kost.user_id,
         kost_name: kost.kost_name,
         kost_address: kost.kost_address,
         kost_contact: kost.kost_contact,
+        kost_desc: kost.kost_desc,
         created_at: kost.created_at,
         updated_at: kost. updated_at,
     };
@@ -298,6 +314,7 @@ pub async fn get_kost_by_id(
 // Handler to update kost data
 pub async fn update_kost(
     Extension(db): Extension<MySqlPool>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<Uuid>,
     Json(payload): Json<KostUpdateRequest>,
 ) -> (StatusCode, Json<ApiResponse<Value>>) {
@@ -328,11 +345,11 @@ pub async fn update_kost(
 
     // Check if the kost exist
     let kost = match sqlx::query!(
-        "
-        SELECT id
+        r#"
+        SELECT id, user_id AS "user_id: Uuid"
         FROM Kosts
         WHERE id = ?
-        ",
+        "#,
         id
     ) 
     .fetch_one(&db)
@@ -359,16 +376,28 @@ pub async fn update_kost(
         }
     };
 
+    // Guard, only owner can update the kost
+    if kost.user_id != claims.sub {
+        return (
+            // Send 401 response Unauthorized
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::error(
+                "Only owner can update the kost",
+            ))
+        );
+    }
+
     // Update kost data
     let result = sqlx::query!(
         "
         UPDATE Kosts
-        SET kost_name = ?, kost_address = ?, kost_contact = ?
+        SET kost_name = ?, kost_address = ?, kost_contact = ?, kost_desc = ?
         WHERE id = ?
         ",
         payload.kost_name,
         payload.kost_address,
         payload.kost_contact,
+        payload.kost_desc,
         id,
     )
     .execute(&db)
@@ -393,6 +422,7 @@ pub async fn update_kost(
             kost_name,
             kost_address,
             kost_contact,
+            kost_desc,
             created_at,
             updated_at
         FROM Kosts
@@ -411,6 +441,7 @@ pub async fn update_kost(
                 kost_name: updated_kost.kost_name,
                 kost_address: updated_kost.kost_address,
                 kost_contact: updated_kost.kost_contact,
+                kost_desc: updated_kost.kost_desc,
                 created_at: updated_kost.created_at,
                 update_at: updated_kost.updated_at,
             };

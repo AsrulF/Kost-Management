@@ -16,6 +16,8 @@ pub struct KostNewRequest {
     pub kost_address: Option<String>,
     #[validate(email(message = "Email is not valid"))]
     pub kost_contact: String,
+    #[validate(length(min = 1, message = "Kost description cannot be empty"))]
+    pub kost_desc: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -25,6 +27,7 @@ pub struct KostNewResponse {
     pub kost_name: String,
     pub kost_address: String,
     pub kost_contact: String,
+    pub kost_desc: String,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>
 }
@@ -36,6 +39,8 @@ pub struct KostUpdateRequest {
     #[validate(required, length(min = 1, message = "Kost new address cannot be empty"))]
     pub kost_address: Option<String>,
     pub kost_contact: String,
+    #[validate(length(min = 1, message = "Kost description cannot be empty"))]
+    pub kost_desc: String,
 }
 
 #[derive(Serialize)]
@@ -45,6 +50,7 @@ pub struct KostUpdateResponse {
     pub kost_name: String,
     pub kost_address: String,
     pub kost_contact: String,
+    pub kost_desc: String,
     pub created_at: Option<DateTime<Utc>>,
     pub update_at: Option<DateTime<Utc>>,
 }
