@@ -30,6 +30,7 @@ async fn main() {
         .merge(routes::auth_routes::auth_routes())
         .merge(routes::user_route::user_routes())
         .merge(routes::kost_route::kost_route())
+        .merge(routes::room_route::room_route())
         .layer(Extension(db))
         .layer(cors);
 

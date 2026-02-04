@@ -17,7 +17,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 // Import room model
-use crate::models::room;
+use crate::models::room::Room;
 
 // Import room schema
 use crate::schemas::room_schema::{
@@ -25,10 +25,8 @@ use crate::schemas::room_schema::{
     RoomNewResponse,
     RoomUpdateRequest,
     RoomUpdateResponse,
+    RoomStatus,
 };
-
-// Import Claims from utils
-use crate::utils::jwt::Claims;
 
 // Import API Response
 use crate::utils::response::ApiResponse;
@@ -67,6 +65,69 @@ pub async fn create_room(
     // Insert new room to database
     let room_id = Uuid::new_v4();
 
-    todo!()
+    let result = sqlx::query!(
+        "INSERT INTO Rooms (id, kost_id, room_number, room_vacancy) VALUES (?, ?, ?, ?)",
+        room_id,
+        kost_id,
+        payload.room_number,
+        payload.room_vacancy
+    )
+    .execute(&db)
+    .await;
+
+    match result {
+        Ok(result) => {
+            // Get newly created room
+            let room = sqlx::query_as!(
+                Room,
+                r#"
+                SELECT id AS "id: Uuid", kost_id AS "kost_id: Uuid", room_number AS "room_number: u32", room_vacancy AS "room_vacancy: RoomStatus", created_at, updated_at
+                FROM Rooms
+                WHERE id = ?
+                "#,
+                room_id
+            )
+            .fetch_one(&db)
+            .await;
+
+            match room {
+                Ok(room) => {
+                    let response = RoomNewResponse {
+                        id: room.id,
+                        kost_id: room.kost_id,
+                        room_number: room.room_number,
+                        room_vacancy: room.room_vacancy,
+                        created_at: room.created_at,
+                        updated_at: room.updated_at,
+                    };
+
+                    (
+                        // Send 200 response Ok
+                        StatusCode::OK,
+                        Json(ApiResponse::success(
+                            "Room created successfully", 
+                            json!(response))),
+                    )
+                },
+                Err(_) => (
+                    // Send 500 response Internal Server Error
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(
+                        "Failed to get new kost data"
+                    ))
+                )
+            }
+        },
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref()
+                ))
+            )
+        }
+    }
 
 }

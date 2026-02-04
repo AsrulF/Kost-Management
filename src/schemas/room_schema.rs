@@ -15,7 +15,7 @@ use sqlx::Type;
 #[derive(Deserialize, Validate)]
 pub struct RoomNewRequest {
     #[validate(range(min = 1, message = "Room number cannot be empty"))]
-    pub room_number: u8,
+    pub room_number: u32,
     pub room_vacancy: RoomStatus,
 }
 
@@ -23,7 +23,7 @@ pub struct RoomNewRequest {
 pub struct RoomNewResponse {
     pub id: Uuid,
     pub kost_id: Uuid,
-    pub room_number: u8,
+    pub room_number: u32,
     pub room_vacancy: RoomStatus,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -32,7 +32,7 @@ pub struct RoomNewResponse {
 #[derive(Deserialize, Validate)]
 pub struct RoomUpdateRequest {
     #[validate(range(min = 1, message = "Room number cannot be empty"))]
-    pub room_number: u8,
+    pub room_number: u32,
     pub room_vacancy: RoomStatus,
 }
 
@@ -40,7 +40,7 @@ pub struct RoomUpdateRequest {
 pub struct RoomUpdateResponse {
     pub id: Uuid,
     pub kost_id: Uuid,
-    pub room_number: u8,
+    pub room_number: u32,
     pub room_vacancy: RoomStatus,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
