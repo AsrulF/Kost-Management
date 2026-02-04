@@ -7,6 +7,11 @@ VALUES
 
 INSERT INTO Permissions (id, name)
 VALUES
+(UUID_TO_BIN(UUID()), 'room:create'),
+(UUID_TO_BIN(UUID()), 'room:update'),
+(UUID_TO_BIN(UUID()), 'room:delete'),
+(UUID_TO_BIN(UUID()), 'room:view_all'),
+(UUID_TO_BIN(UUID()), 'room:view'),
 (UUID_TO_BIN(UUID()), 'kost:create'),
 (UUID_TO_BIN(UUID()), 'kost:update'),
 (UUID_TO_BIN(UUID()), 'kost:delete'),

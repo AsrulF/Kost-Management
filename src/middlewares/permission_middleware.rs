@@ -72,6 +72,10 @@ pub async fn require_permission_owner(
         "kost:update",
         "kost:delete",
         "kost:view",
+        "room:create",
+        "room:update",
+        "room:delete",
+        "room:view",
     ];
 
     let claims = req

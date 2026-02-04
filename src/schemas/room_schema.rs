@@ -50,9 +50,9 @@ pub struct RoomUpdateResponse {
 #[sqlx(type_name = "ENUM")]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RoomStatus {
-    Available,
-    Occupied,
-    Maintenance,
+    AVAILABLE,
+    OCCUPIED,
+    MAINTENANCE,
 }
 
 

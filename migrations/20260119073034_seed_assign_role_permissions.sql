@@ -14,5 +14,9 @@ WHERE r.name = 'OWNER'
         'kost:create',
         'kost:update',
         'kost:delete',
-        'kost:view'
+        'kost:view',
+        'room:create',
+        'room:update',
+        'room:delete',
+        'room:view'
     );

@@ -76,7 +76,7 @@ pub async fn create_room(
     .await;
 
     match result {
-        Ok(result) => {
+        Ok(_result) => {
             // Get newly created room
             let room = sqlx::query_as!(
                 Room,
