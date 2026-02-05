@@ -16,8 +16,14 @@ use serde_json::{
 use uuid::Uuid;
 use validator::Validate;
 
+// Import claims from utils
+use crate::utils::jwt::Claims;
+
 // Import room model
-use crate::models::room::Room;
+use crate::models::room::{
+    Room,
+    RoomPath,
+};
 
 // Import room schema
 use crate::schemas::room_schema::{
@@ -35,8 +41,45 @@ use crate::utils::response::ApiResponse;
 pub async fn create_room(
     Extension(db): Extension<MySqlPool>,
     Path(kost_id): Path<Uuid>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<RoomNewRequest>,
 ) -> (StatusCode, Json<ApiResponse<Value>>) {
+
+    // Guard, so only kost owner can access and modify
+    let kost = match sqlx::query!(
+        r#"
+        SELECT id AS "id: Uuid", user_id AS "user_id: Uuid"
+        FROM Kosts
+        WHERE id = ?
+        "#,
+        kost_id
+    )
+    .fetch_one(&db)
+    .await 
+    {
+        Ok(kost) => kost,
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            )
+        }
+    };
+
+    if kost.user_id != claims.sub {
+        return (
+            // Send 401 Unauthorized
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::error(
+                "Only owner can access and modify this kost"
+            ))
+        );
+    }
+
     // Validate the request
     if let Err(e) = payload.validate() {
         let mut field_errors: HashMap<String, Vec<String>> = HashMap::new();
@@ -130,4 +173,175 @@ pub async fn create_room(
         }
     }
 
+}
+
+pub async fn get_all_rooms(
+    Extension(db): Extension<MySqlPool>,
+    Path(kost_id): Path<Uuid>,
+    Extension(claims): Extension<Claims>
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+    // Get all rooms data
+    if claims.role == "ADMIN" {
+        let rooms = match sqlx::query_as!(
+            Room,
+            r#"
+            SELECT id AS "id: Uuid", kost_id AS "kost_id: Uuid", room_number AS "room_number: u32", room_vacancy AS "room_vacancy: RoomStatus", created_at, updated_at
+            FROM Rooms
+            ORDER BY room_number DESC
+            "#,
+        )
+        .fetch_all(&db)
+        .await
+        {
+            Ok(rooms) => rooms,
+            Err(e) => {
+                eprintln!("Database error: {}", e);
+                return (
+                    // Send 500 response Internal Server Error
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(
+                        e.to_string().as_ref(),
+                    ))
+                );
+            }
+        };
+
+        (
+            // Send 200 response OK
+            StatusCode::OK,
+            Json(ApiResponse::success(
+                "Rooms List", 
+                json!(rooms)))
+        )    
+    } else {
+        let rooms = match sqlx::query_as!(
+            Room,
+            r#"
+            SELECT id AS "id: Uuid", kost_id AS "kost_id: Uuid", room_number AS "room_number: u32", room_vacancy AS "room_vacancy: RoomStatus", created_at, updated_at
+            FROM Rooms
+            WHERE kost_id = ?
+            ORDER BY room_number ASC
+            "#,
+            kost_id,
+        )
+        .fetch_all(&db)
+        .await
+        {
+            Ok(rooms) => rooms,
+            Err(e) => {
+                eprintln!("Database Error: {}", e);
+                return (
+                    // Send 500 response Internal Server Error
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(
+                        e.to_string().as_ref(),
+                    ))
+                );
+            }
+        };
+
+        (
+            // Send 200 response Ok
+            StatusCode::OK,
+            Json(ApiResponse::success(
+                "Rooms List", 
+                json!(rooms)))
+        )
+    }
+}
+
+pub async fn get_room_by_id(
+    Extension(db): Extension<MySqlPool>,
+    Extension(claims): Extension<Claims>,
+    Path(path): Path<RoomPath>
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+    let kost_id = path.kost_id;
+    let room_id = path.room_id;
+
+    // Guard
+    let kost = match sqlx::query!(
+        r#"
+        SELECT id AS "id: Uuid", user_id AS "user_id: Uuid"
+        FROM Kosts
+        Where id = ?
+        "#,
+        kost_id,
+    )
+    .fetch_one(&db)
+    .await 
+    {
+        Ok(kost) => kost,
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            );
+        }
+    };
+
+    if kost.user_id != claims.sub {
+        return (
+            // Send 401 response Unauthorized
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::error(
+                "Only owner can access this"
+            ))
+        );
+    }
+
+    // Get room data by id
+    let room = match sqlx::query!(
+        r#"
+        SELECT id AS "id: Uuid", kost_id AS "kost_id: Uuid", room_number AS "room_number: u32", room_vacancy AS "room_vacancy: RoomStatus", created_at, updated_at
+        FROM Rooms
+        WHERE id = ? AND kost_id = ?
+        "#,
+        room_id,
+        kost_id,
+    ) 
+    .fetch_one(&db)
+    .await
+    {
+        Ok(room) => room,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                // Send 404 response Not Found
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "Room with provided id is not found"
+                ))
+            );
+        },
+        Err(e) => {
+            eprintln!("Database error: {}",e);
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            );
+        }
+    };
+
+    let response = RoomNewResponse {
+        id: room.id,
+        kost_id: room.kost_id,
+        room_number: room.room_number,
+        room_vacancy: room.room_vacancy,
+        created_at: room.created_at,
+        updated_at: room.updated_at
+    };
+
+    (
+        // Send 200 response OK
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            "Room Details", 
+            json!(response)))
+    )
 }

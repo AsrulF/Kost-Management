@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -12,4 +12,10 @@ pub struct Room {
     pub room_vacancy: RoomStatus,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct RoomPath {
+    pub kost_id: Uuid,
+    pub room_id: Uuid,
 }
