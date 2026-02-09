@@ -175,6 +175,7 @@ pub async fn create_room(
 
 }
 
+// Handler to get all room data
 pub async fn get_all_rooms(
     Extension(db): Extension<MySqlPool>,
     Path(kost_id): Path<Uuid>,
@@ -250,6 +251,7 @@ pub async fn get_all_rooms(
     }
 }
 
+// Handler to get room by id 
 pub async fn get_room_by_id(
     Extension(db): Extension<MySqlPool>,
     Extension(claims): Extension<Claims>,
@@ -346,6 +348,7 @@ pub async fn get_room_by_id(
     )
 }
 
+// Handler to update room
 pub async fn update_room(
     Extension(db): Extension<MySqlPool>,
     Extension(claims): Extension<Claims>,
@@ -492,6 +495,115 @@ pub async fn update_room(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiResponse::error(
                     "Server Error",
+                ))
+            );
+        }
+    }
+}
+
+// Handler to delete room
+pub async fn delete_room(
+    Extension(db): Extension<MySqlPool>,
+    Extension(claims): Extension<Claims>,
+    Path(path): Path<RoomPath>,
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+    // Check the kost and room exist
+    let (kost_id, room_id) = (path.kost_id, path.room_id);
+
+    let kost = match sqlx::query!(
+        r#"
+        SELECT id AS "id: Uuid", user_id AS "user_id: Uuid"
+        FROM Kosts
+        WHERE id = ? AND user_id = ? 
+        "#,
+        kost_id,
+        claims.sub
+    )
+    .fetch_one(&db)
+    .await
+    {
+        Ok(kost) => kost,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                // Send 404 response Not Found
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "Kost with provided Id is not found",
+                ))
+            );
+        },
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            );
+        }
+    };
+
+    let room = match sqlx::query!(
+        r#"
+        SELECT id AS "id: Uuid", kost_id AS "kost_id: Uuid"
+        FROM Rooms
+        WHERE id = ? AND kost_id = ?
+        "#,
+        room_id,
+        kost_id,
+    ) 
+    .fetch_one(&db)
+    .await
+    {
+        Ok(room) => room,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                // Send 404 response Not Found
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "Room with provided id is not found",
+                ))
+            );
+        },
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            );
+        }
+    };
+
+    let result = sqlx::query!(
+        "
+        DELETE FROM Rooms WHERE id = ?
+        ",
+        room.id
+    )
+    .execute(&db)
+    .await;
+
+    match result {
+        Ok(_) => {
+            return (
+                // Send 200 response Ok
+                StatusCode::OK,
+                Json(ApiResponse::success(
+                    "Room deleted successfully", 
+                    json!(null)))
+            );
+        },
+        Err(e) => {
+            eprintln!("Database Error: {}", e);
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
                 ))
             );
         }
