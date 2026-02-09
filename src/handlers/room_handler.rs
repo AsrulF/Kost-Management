@@ -345,3 +345,155 @@ pub async fn get_room_by_id(
             json!(response)))
     )
 }
+
+pub async fn update_room(
+    Extension(db): Extension<MySqlPool>,
+    Extension(claims): Extension<Claims>,
+    Path(path): Path<RoomPath>,
+    Json(payload): Json<RoomUpdateRequest>,
+) -> (StatusCode, Json<ApiResponse<Value>>) {
+    // Guard for kost and room
+    let (kost_id, room_id) = (path.kost_id, path.room_id);
+
+    let _kost = match sqlx::query!(
+        r#"
+        SELECT id AS "id: Uuid", user_id AS "user_id: Uuid"
+        FROM Kosts
+        WHERE id = ? AND user_id = ?
+        "#,
+        kost_id,
+        claims.sub
+    )
+    .fetch_one(&db)
+    .await
+    {
+        Ok(kost) => kost,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                // Return 404 response Not Found
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "Kost with provided id is not found",
+                ))
+            );
+        },
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            );
+        }
+    };
+
+    let _room = match sqlx::query!(
+        r#"
+        SELECT id as "id: Uuid", kost_id AS "kost_id: Uuid", room_number AS "room_number: u32", room_vacancy AS "room_vacancy: RoomStatus", created_at, updated_at
+        FROM Rooms
+        WHERE id = ? AND kost_id = ?
+        "#,
+        room_id,
+        kost_id,
+    ) 
+    .fetch_one(&db)
+    .await
+    {
+        Ok(room) => room,
+        Err(sqlx::Error::RowNotFound) => {
+            return (
+                // Send 404 response Not Found
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "Room with provided id is not found"
+                ))
+            );
+        },
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return (
+                // Return 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    e.to_string().as_ref(),
+                ))
+            );
+        }
+    };
+
+    // Update kost data
+    let result = sqlx::query!(
+        "
+        UPDATE Rooms
+        SET room_number = ?, room_vacancy = ?
+        WHERE id = ?
+        ",
+        payload.room_number,
+        payload.room_vacancy,
+        room_id
+    )
+    .execute(&db)
+    .await;
+
+    if let Err(e) = result {
+        eprintln!("Database error: {}", e);
+        return (
+            // Send 500 response Internal Server Error
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                e.to_string().as_ref(),
+            ))
+        );
+    }
+
+    // Get new room data
+    let updated_room = sqlx::query!(
+        r#"
+        SELECT 
+            id AS "id: Uuid",
+            kost_id AS "kost_id: Uuid",
+            room_number AS "room_number: u32",
+            room_vacancy AS "room_vacancy: RoomStatus",
+            created_at,
+            updated_at
+        FROM Rooms
+        WHERE id = ?
+        "#,
+        room_id
+    )
+    .fetch_one(&db)
+    .await;
+
+    match updated_room {
+        Ok(updated_room) => {
+            let response = RoomUpdateResponse {
+                id: updated_room.id,
+                kost_id: updated_room.kost_id,
+                room_number: updated_room.room_number,
+                room_vacancy: updated_room.room_vacancy,
+                created_at: updated_room.created_at,
+                updated_at: updated_room.updated_at
+            };
+
+            return (
+                // Send 200 response Ok
+                StatusCode::OK,
+                Json(ApiResponse::success(
+                    "Room updated successfully", 
+                    json!(response),
+                ))
+            );
+        },
+        Err(_) => {
+            return (
+                // Send 500 response Internal Server Error
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "Server Error",
+                ))
+            );
+        }
+    }
+}

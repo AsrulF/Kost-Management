@@ -7,7 +7,7 @@ use axum::{
 // Import room handler
 use crate::handlers::room_handler::{
     create_room,
-    get_all_rooms, get_room_by_id,
+    get_all_rooms, get_room_by_id, update_room,
 };
 
 // Import auth middleware
@@ -35,5 +35,10 @@ pub fn room_route() -> Router {
             get(get_room_by_id)
                 .layer(from_fn(require_permission_owner)) 
         )
+        // PUT /api/kosts/{kost_id}/rooms/{room_id} => update room data
+        .route(
+            "/api/kosts/{kost_id}/rooms/{room_id}", 
+            put(update_room))
+                .layer(from_fn(require_permission_owner))
         .layer(from_fn(auth))
 }

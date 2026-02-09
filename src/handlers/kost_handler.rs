@@ -406,11 +406,12 @@ pub async fn update_kost(
     .await;
 
     if let Err(e) = result {
+        eprintln!("Database error: {}", e);
         return (
             // Send 500 response Internal Server Error
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::error(
-                "Server error",
+                e.to_string().as_ref(),
             ))
         );
     }
